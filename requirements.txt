@@ -1,4 +1,5 @@
 streamlit
-requests
 pandas
 matplotlib
+requests
++plotly==5.18.0  # 添加 plotly 依赖
