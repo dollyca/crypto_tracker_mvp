@@ -3,21 +3,29 @@ import pandas as pd
 from datetime import datetime
 import os
 
-def fetch_crypto_price(coin_id="bitcoin"):
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
-    response = requests.get(url).json()
-    price = response[coin_id]['usd']
-    return price
+# 幣種列表
+coins = ["bitcoin", "ethereum", "tether"]
 
-def save_to_csv(price, coin_id="bitcoin"):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    data_path = "data/crypto_prices.csv"
-    df = pd.DataFrame([[now, coin_id, price]], columns=["timestamp", "coin", "price"])
-    if os.path.exists(data_path):
-        df.to_csv(data_path, mode='a', header=False, index=False)
+def fetch_price(coin):
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd&include_24hr_change=true"
+    res = requests.get(url).json()
+    price = res[coin]["usd"]
+    change_24h = res[coin]["usd_24h_change"]
+    return price, change_24h
+
+def save_to_csv(data):
+    df = pd.DataFrame(data, columns=["timestamp", "coin", "price", "change_24h"])
+    file_path = "data/crypto_prices.csv"
+    os.makedirs("data", exist_ok=True)
+    if os.path.exists(file_path):
+        df.to_csv(file_path, mode="a", index=False, header=False)
     else:
-        df.to_csv(data_path, index=False)
+        df.to_csv(file_path, index=False)
 
 if __name__ == "__main__":
-    price = fetch_crypto_price("bitcoin")
-    save_to_csv(price, "bitcoin")
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    rows = []
+    for coin in coins:
+        price, change = fetch_price(coin)
+        rows.append([now, coin, price, change])
+    save_to_csv(rows)
