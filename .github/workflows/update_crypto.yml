@@ -1,34 +1,44 @@
-name: Daily Crypto Price Update
+name: 每日加密貨幣價格更新
 
 on:
   schedule:
     - cron: "0 0 * * *"  # 每天 UTC 0:00 執行
-  workflow_dispatch:      # 可以手動觸發
+  workflow_dispatch:      # 可手動觸發
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
+    # 新增權限配置 ⭐
+    permissions:
+      contents: write    # 授予推送代碼權限
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
+    steps:
+      - name: 簽出代碼庫
+        uses: actions/checkout@v4  # 升級到最新版本
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # 使用自動生成的令牌
+          persist-credentials: true          # 保存憑證供後續步驟使用
+
+      - name: 設置 Python 環境
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: 安裝依賴包
         run: pip install pandas requests
 
-      - name: Run fetch script
+      - name: 執行爬蟲腳本
         run: python fetch_crypto.py
 
-      - name: Commit and Push
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: 提交並推送更新
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          # 配置 Git 身份 (使用 GitHub 官方機器人帳戶)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 添加文件並提交
           git add data/crypto_prices.csv
-          git commit -m "auto: update crypto price" || echo "No changes"
-          git push https://x-access-token:${GH_TOKEN}@github.com/dollyca/crypto_tracker_mvp.git HEAD:main
+          git commit -m "auto: update crypto price" || echo "沒有變更需要提交"
+          
+          # 使用認證 URL 推送
+          git push "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
