@@ -34,17 +34,17 @@ def safe_load_data():
 
 # 1️⃣ 頁面設定
 st.set_page_config(page_title="加密貨幣追蹤儀表板", layout="wide")
-st.title("📈 加密貨幣即時追蹤系統")
+st.title("📈 Real-time Crypto Tracking System")
 
 # 2️⃣ 載入資料
 df = safe_load_data()
 
 # 3️⃣ 側邊控制面板
 with st.sidebar:
-    st.header("控制面板")
+    st.header("Crypto Selection Panel")
     coins = df["coin"].unique().tolist() if not df.empty else []
-    selected_coin = st.selectbox("選擇幣種", coins, index=0 if coins else None)
-    time_range = st.radio("時間範圍", ["24小時", "7天", "1個月"], horizontal=True)
+    selected_coin = st.selectbox("Currency Selector", coins, index=0 if coins else None)
+    time_range = st.radio("Time Range", ["24 Hours", "7 Days", "1 Month"], horizontal=True)
 
 # 4️⃣ 主區域：顯示內容
 if not df.empty:
