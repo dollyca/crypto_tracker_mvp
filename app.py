@@ -50,49 +50,59 @@ with st.sidebar:
 if not df.empty:
     filtered_df = df[df["coin"] == selected_coin].sort_values("timestamp")
 
-    latest = filtered_df.iloc[-1]
-    with st.container():
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("當前價格", f"${latest['price']:,.2f}")
-        with col2:
-            delta_color = "inverse" if latest['change_24h'] < 0 else "normal"
-            st.metric("24小時漲跌", f"{latest['change_24h']:.2f}%", delta_color=delta_color)
-        with col3:
-            st.metric("最後更新時間", latest['timestamp'].strftime("%Y-%m-%d %H:%M"))
-
+    # 根據時間篩選（放前面才正確）
     if time_range == "7天":
         filtered_df = filtered_df[filtered_df['timestamp'] > pd.Timestamp.now() - pd.DateOffset(days=7)]
     elif time_range == "1個月":
         filtered_df = filtered_df[filtered_df['timestamp'] > pd.Timestamp.now() - pd.DateOffset(months=1)]
 
-    fig = px.line(filtered_df,
-                  x="timestamp",
-                  y="price",
-                  title=f"{selected_coin.upper()} 價格趨勢",
-                  labels={'price': '價格 (USD)', 'timestamp': '時間'},
-                  template="plotly_dark")
+    # 限制最多顯示最新 200 筆資料，加速前端渲染
+    MAX_POINTS = 200
+    filtered_df = filtered_df.tail(MAX_POINTS)
 
-    fig.update_layout(
-        hovermode="x unified",
-        showlegend=False,
-        xaxis=dict(rangeslider=dict(visible=True))
-    )
+    if not filtered_df.empty:
+        latest = filtered_df.iloc[-1]
 
-    fig.add_annotation(
-        x=latest['timestamp'],
-        y=latest['price'],
-        text=f"當前: ${latest['price']:,.2f}",
-        showarrow=True,
-        arrowhead=1
-    )
+        with st.container():
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("當前價格", f"${latest['price']:,.2f}")
+            with col2:
+                delta_color = "inverse" if latest['change_24h'] < 0 else "normal"
+                st.metric("24小時漲跌", f"{latest['change_24h']:.2f}%", delta_color=delta_color)
+            with col3:
+                st.metric("最後更新時間", latest['timestamp'].strftime("%Y-%m-%d %H:%M"))
 
-    st.plotly_chart(fig, use_container_width=True)
+        fig = px.line(filtered_df,
+                      x="timestamp",
+                      y="price",
+                      title=f"{selected_coin.upper()} 價格趨勢",
+                      labels={'price': '價格 (USD)', 'timestamp': '時間'},
+                      template="plotly_dark")
 
-    with st.expander("📊 查看原始數據"):
-        st.dataframe(filtered_df.style.format({
-            'price': '${:,.2f}',
-            'change_24h': '{:.2f}%'
-        }))
+        fig.update_layout(
+            hovermode="x unified",
+            showlegend=False,
+            xaxis=dict(rangeslider=dict(visible=False))  # ⛔ 建議關掉 rangeslider 加速手機渲染
+        )
+
+        fig.add_annotation(
+            x=latest['timestamp'],
+            y=latest['price'],
+            text=f"當前: ${latest['price']:,.2f}",
+            showarrow=True,
+            arrowhead=1
+        )
+
+        with st.spinner("📈 圖表載入中，請稍候..."):
+            st.plotly_chart(fig, use_container_width=True)
+
+        with st.expander("📊 查看原始數據"):
+            st.dataframe(filtered_df.style.format({
+                'price': '${:,.2f}',
+                'change_24h': '{:.2f}%'
+            }))
+    else:
+        st.warning("📭 目前時間範圍內無資料")
 else:
     st.warning("📭 尚無資料，等待初次更新或請確認資料檔案存在。")
